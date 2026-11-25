@@ -1,0 +1,233 @@
+/* Tema "Nookdeck" (Settings › Display › Theme): o design system "Nookdeck Tablet" aplicado ao painel do PhoneBox.
+   Alvo: tablet em paisagem, 1280×800, grade 12×8 (Settings › Display › Mais linhas no tablet).
+   Tudo fica sob [data-theme="nookdeck"], então os outros temas não mudam. Arquivo separado para facilitar merges
+   com o PhoneBox original. As cores e medidas vêm de tokens.json do design system. */
+
+/* ---------- tokens ---------- */
+/* No <html> porque os gráficos em canvas leem as cores de lá (cssVar em main.js). */
+html[data-theme="nookdeck"] {
+  --nd-bg: #0b0b0d;
+  --nd-tile: #16161a;
+  --nd-tile-2: #1b1b1f;
+  --nd-line: #26262b;
+  --nd-line-2: #34343a;
+  --nd-text: #f4f4f5;
+  --nd-text-2: #c7c7cf;
+  --nd-muted: #8b8b94;
+  --nd-accent: #22d3ee;
+  --nd-live: #34d399;
+  --nd-warn: #f59e0b;
+  --nd-bad: #f87171;
+  --on-light: #0b0d10;
+  --track: rgba(139, 139, 148, 0.18);
+  --pill-flat: rgba(139, 139, 148, 0.16);
+  --row-soft: rgba(139, 139, 148, 0.06);
+  --warn-soft: rgba(245, 158, 11, 0.07);
+  --warn-line: rgba(245, 158, 11, 0.5);
+  --nd-pad: 20px;
+  --nd-gap: 14px;
+  --nd-head-h: 40px;
+  --radius-card: 18px;
+  --radius-inner: 14px;
+  --nd-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* variáveis do PhoneBox mapeadas para os tokens */
+  --bg: var(--nd-bg);
+  --card: var(--nd-tile);
+  --card-hi: var(--nd-tile-2);
+  --line: var(--nd-line);
+  --text: var(--nd-text);
+  --muted: var(--nd-muted);
+  --dim: #6b6b75;
+  --cpu: #2dd4bf;
+  --gpu: #a78bfa;
+  --ram: #f472b6;
+  --net: #f59e0b;
+  --up: #60a5fa;
+  --ok: var(--nd-live);
+  --err: var(--nd-bad);
+}
+/* --accent fica no body: o <html> recebe a cor de destaque das configurações como estilo inline */
+body[data-theme="nookdeck"] {
+  --accent: var(--nd-accent);
+  --ambient: 34, 211, 238;
+  background: var(--nd-bg);
+  color: var(--nd-text);
+  font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+body[data-theme="nookdeck"]::before { /* brilho ambiente bem suave no topo, como no design */
+  background: radial-gradient(120% 60% at 50% -10%, rgba(45, 212, 191, 0.06), transparent 60%);
+}
+
+/* ---------- barra de status (#ndhead, criada por renderNdHead em main.js) ---------- */
+#ndhead {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 5;
+  height: var(--nd-head-h); display: flex; align-items: center; gap: 12px;
+  padding: 0 max(var(--nd-pad), env(safe-area-inset-right)) 0 max(var(--nd-pad), env(safe-area-inset-left));
+  font-variant-numeric: tabular-nums; pointer-events: none;
+}
+#ndhead .nh-conn { display: flex; align-items: center; gap: 9px; min-width: 0; }
+#ndhead .nh-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: #4a4a52; }
+#ndhead .nh-dot.on { background: var(--nd-live); box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.16); }
+#ndhead .nh-dot.wait { background: var(--nd-warn); }
+#ndhead .nh-dot.off { background: var(--nd-bad); }
+#ndhead .nh-host { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#ndhead .nh-m { display: flex; font-size: 12.5px; font-weight: 500; color: var(--nd-muted); white-space: nowrap; overflow: hidden; }
+#ndhead .nh-m span + span::before { content: "·"; margin: 0 8px; color: var(--nd-line-2); }
+#ndhead .nh-grow { flex: 1; }
+#ndhead .nh-t { font-size: 14px; font-weight: 600; color: var(--nd-text-2); }
+
+/* ---------- página e grade ---------- */
+body[data-theme="nookdeck"] .page { padding: 10px max(var(--nd-pad), env(safe-area-inset-right)) 14px max(var(--nd-pad), env(safe-area-inset-left)); }
+body.nd-has-head[data-theme="nookdeck"] .page { padding-top: var(--nd-head-h); }
+body[data-theme="nookdeck"] .grid { gap: var(--nd-gap); }
+
+/* ---------- cartão e título ---------- */
+body[data-theme="nookdeck"] .card { background: var(--nd-tile); border: 1px solid var(--nd-line); border-radius: var(--radius-card); }
+body[data-theme="nookdeck"] .w-title,
+body[data-theme="nookdeck"] .t-label { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+body[data-theme="nookdeck"] .w-sub { font-size: 12px; font-weight: 400; color: var(--nd-muted); }
+/* contêineres sem cartão próprio (teclas, cotas, processos) */
+body[data-theme="nookdeck"] :is(.w-quotas, .w-processes) { background: none; border: 0; }
+
+/* ---------- relógio: cartão, hora fina 92/200, data em caixa alta ---------- */
+body[data-theme="nookdeck"] .w-clock {
+  background: var(--nd-tile); border: 1px solid var(--nd-line); border-radius: var(--radius-card);
+  padding: 16px 16px 16px 18px;
+}
+body[data-theme="nookdeck"] .w-clock .clock { font-weight: 200; letter-spacing: -0.03em; }
+body[data-theme="nookdeck"] .w-clock .colon { opacity: 1; }
+body[data-theme="nookdeck"] .w-clock .colon.dim { opacity: 1; }
+body[data-theme="nookdeck"] .w-clock .sec { color: var(--nd-muted); font-weight: 400; }
+body[data-theme="nookdeck"] .w-clock .date { margin-top: 10px; font-size: clamp(12px, 9cqh, 15px); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--nd-muted); }
+
+/* ---------- métrica: número 44/600, unidade 16, gráfico de área na base ---------- */
+body[data-theme="nookdeck"] .w-stat { padding: 16px; }
+body[data-theme="nookdeck"] .w-stat .t-val { margin-top: 10px; }
+body[data-theme="nookdeck"] .w-stat .t-val b { font-size: clamp(22px, 26cqh, 44px); font-weight: 600; letter-spacing: -0.02em; }
+body[data-theme="nookdeck"] .w-stat .t-val small { margin-left: 5px; font-size: clamp(12px, 9cqh, 16px); font-weight: 500; color: var(--nd-muted); }
+body[data-theme="nookdeck"] .w-stat .t-sub { margin-top: 4px; font-size: 13px; color: var(--nd-muted); }
+body[data-theme="nookdeck"] .w-stat canvas { height: 38%; opacity: 1; }
+body[data-theme="nookdeck"] .w-stat .t-val,
+body[data-theme="nookdeck"] .w-stat .t-sub { text-shadow: none; }
+@container (max-height: 150px) { body[data-theme="nookdeck"] .w-stat .t-sub { display: none; } }
+
+/* ---------- anel (gauge): rótulo no topo, anel à esquerda, valor à direita ---------- */
+body[data-theme="nookdeck"] .w-gauge {
+  display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto 1fr;
+  align-items: center; justify-items: start; column-gap: 16px; padding: 16px;
+}
+body[data-theme="nookdeck"] .w-gauge .g-label { grid-column: 1 / -1; grid-row: 1; order: -1; align-self: start; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: var(--q); }
+body[data-theme="nookdeck"] .w-gauge .g-dial { grid-column: 1; grid-row: 2; height: min(68cqh, 96px); }
+body[data-theme="nookdeck"] .w-gauge .g-sub { grid-column: 2; grid-row: 2; font-size: 13px; text-align: start; }
+body[data-theme="nookdeck"] .w-gauge .g-val { font-size: min(18cqh, 22px); font-weight: 600; }
+body[data-theme="nookdeck"] :is(.g-dial, .q-dial) .bg { stroke: var(--track); }
+body[data-theme="nookdeck"] :is(.g-dial, .q-dial) .fg { filter: none; }
+@container (max-height: 120px) { body[data-theme="nookdeck"] .w-gauge .g-sub { display: block; } }
+
+/* ---------- cota de IA (quotaring): cartão com barra horizontal ---------- */
+.ndq { display: none; }
+body[data-theme="nookdeck"] .w-quotaring { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 16px; }
+body[data-theme="nookdeck"] .w-quotaring > :is(.g-dial, .g-label, .g-sub) { display: none; }
+body[data-theme="nookdeck"] .w-quotaring .ndq { display: block; }
+.ndq-head { display: flex; align-items: center; gap: 10px; }
+.ndq-mark { flex: none; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 1px solid var(--nd-line-2); border-radius: 9px; color: var(--q); font-size: 18px; }
+.ndq-name { flex: 1; font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ndq-plan { padding: 1px 8px; border: 1px solid var(--nd-line-2); border-radius: 7px; font-size: 12px; font-weight: 600; color: var(--nd-muted); white-space: nowrap; }
+.ndq-pct { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ndq-bar { position: relative; height: 12px; margin-top: 14px; border-radius: 999px; background: var(--track); overflow: hidden; }
+.ndq-bar i { display: block; height: 100%; border-radius: 999px; transition: width .6s var(--nd-ease); }
+.ndq-hair { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--nd-tile); }
+.ndq-s { margin-top: 10px; font-size: 13px; color: var(--nd-muted); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* cotas grandes (quotas): cartão chapado e badge com borda */
+body[data-theme="nookdeck"] .q-card { background: var(--nd-tile); border-color: var(--nd-line); border-radius: var(--radius-card); }
+body[data-theme="nookdeck"] .q-plan { color: var(--nd-muted); background: transparent; border: 1px solid var(--nd-line-2); border-radius: 7px; }
+body[data-theme="nookdeck"] .q-left { color: var(--nd-live); }
+
+/* ---------- now playing: capa + texto em cima, barra, controles embaixo ---------- */
+body[data-theme="nookdeck"] .w-media { padding: 16px; justify-content: flex-start; gap: 0; }
+body[data-theme="nookdeck"] .w-media .m-top { flex: 0 0 auto; align-items: center; gap: 16px; }
+body[data-theme="nookdeck"] .w-media .art-wrap { height: 92px; width: 92px; border-radius: var(--radius-inner); background: linear-gradient(135deg, #14495b, #0b1d25); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); }
+body[data-theme="nookdeck"] .w-media .m-app { font-size: 13px; font-weight: 700; letter-spacing: 0.12em; color: var(--nd-accent); }
+body[data-theme="nookdeck"] .w-media .m-title { font-size: 22px; font-weight: 700; line-height: 1.15; }
+body[data-theme="nookdeck"] .w-media .m-artist { font-size: 15px; color: var(--nd-muted); }
+body[data-theme="nookdeck"] .w-media .m-progress { margin-top: 18px; }
+body[data-theme="nookdeck"] .w-media .times { font-size: 13px; color: var(--nd-muted); }
+body[data-theme="nookdeck"] .w-media .m-controls { margin-top: auto; justify-content: center; gap: 18px; }
+body[data-theme="nookdeck"] .w-media .m-controls .ic:not(.play) { color: var(--nd-muted); }
+body[data-theme="nookdeck"] .w-media .m-controls .play { width: 64px; height: 64px; background: #fff; color: #0b0b0d; }
+/* volume só em cartões largos; no cartão vertical do design não aparece */
+@container (max-width: 420px) { body[data-theme="nookdeck"] .w-media .vol { display: none; } }
+
+/* ---------- sessões de código ---------- */
+body[data-theme="nookdeck"] .w-sessions { padding: 16px; }
+body[data-theme="nookdeck"] .s-list { grid-auto-rows: 52px; gap: 8px; }
+body[data-theme="nookdeck"] .sess { background: var(--row-soft); border: 1px solid var(--nd-line); border-radius: var(--radius-inner); padding: 0 14px; gap: 12px; }
+body[data-theme="nookdeck"] .sess .st { width: 10px; height: 10px; flex-basis: 10px; background: #4a4a52; box-shadow: none; }
+body[data-theme="nookdeck"] .sess.busy .st { background: var(--nd-live); box-shadow: none; }
+body[data-theme="nookdeck"] .sess.shell .st { background: var(--up); box-shadow: none; }
+body[data-theme="nookdeck"] .sess.waiting { background: var(--warn-soft); border-color: var(--warn-line); }
+body[data-theme="nookdeck"] .sess.waiting .st { background: var(--nd-warn); box-shadow: none; }
+body[data-theme="nookdeck"] .sess.idle { opacity: 1; }
+
+/* ---------- teclas (atalhos e botão grande): célula elevada com squircle 52px e rótulo, como o ControlDeck ---------- */
+body[data-theme="nookdeck"] .w-shortcuts { background: var(--nd-tile); border: 1px solid var(--nd-line); border-radius: var(--radius-card); padding: 16px; }
+body[data-theme="nookdeck"] .deck-grid { gap: 12px; }
+body[data-theme="nookdeck"] .key {
+  container-type: size; gap: 8px;
+  background: var(--nd-tile-2); border: 1px solid var(--nd-line); border-radius: var(--radius-inner);
+  transition: transform 120ms var(--nd-ease);
+}
+body[data-theme="nookdeck"] .key:active { transform: scale(.94); filter: none; }
+body[data-theme="nookdeck"] .key:not(.k-cover) .k-icon {
+  display: flex; align-items: center; justify-content: center; flex: none;
+  width: clamp(36px, 46cqmin, 76px); height: clamp(36px, 46cqmin, 76px);
+  border-radius: 29%; background: var(--k); color: var(--on-light);
+  font-size: clamp(18px, 23cqmin, 38px);
+}
+body[data-theme="nookdeck"] .key:not(.k-cover) .k-icon .ico { width: 1em; height: 1em; stroke-width: 2.25; margin: 0; }
+body[data-theme="nookdeck"] .key:not(.k-cover) .k-icon.k-icon-img img { width: 62%; height: 62%; }
+body[data-theme="nookdeck"] .key .k-label { font-size: clamp(11px, 10cqmin, 15px); font-weight: 500; color: var(--nd-text-2); }
+body[data-theme="nookdeck"] .key.k-nolabel .k-icon { width: clamp(40px, 60cqmin, 110px); height: clamp(40px, 60cqmin, 110px); font-size: clamp(20px, 30cqmin, 54px); }
+/* liga/desliga e retorno da ação viram anel em volta do squircle */
+body[data-theme="nookdeck"] .key:not(.k-cover)::after { display: none; }
+body[data-theme="nookdeck"] .key.toggle::before { top: 8px; right: 8px; width: 8px; height: 8px; }
+body[data-theme="nookdeck"] .key.toggle.on::before { background: var(--nd-live); box-shadow: none; }
+body[data-theme="nookdeck"] .key.toggle.on { filter: none; border-color: var(--nd-accent); }
+body[data-theme="nookdeck"] .key:not(.k-cover) .k-icon { transition: box-shadow .2s; }
+body[data-theme="nookdeck"] .key.ok .k-icon { box-shadow: 0 0 0 3px var(--nd-tile-2), 0 0 0 5px var(--nd-live); }
+body[data-theme="nookdeck"] .key.err .k-icon { box-shadow: 0 0 0 3px var(--nd-tile-2), 0 0 0 5px var(--nd-bad); }
+
+/* ---------- controles (OBS, mixer, Control Deck) ---------- */
+body[data-theme="nookdeck"] :is(.deck-button, .deck-hold, .deck-channel, .radio-card) {
+  background: var(--nd-tile-2); border: 1px solid var(--nd-line); border-radius: var(--radius-inner);
+}
+body[data-theme="nookdeck"] .deck-button.selected,
+body[data-theme="nookdeck"] .deck-button[aria-pressed="true"] { border-color: var(--nd-accent); background: rgba(34, 211, 238, .14); color: var(--nd-text); }
+body[data-theme="nookdeck"] .deck-button:active,
+body[data-theme="nookdeck"] .deck-hold.held { background: var(--nd-accent); color: var(--on-light); }
+body[data-theme="nookdeck"] .chip-btn { background: var(--pill-flat); border-radius: 999px; }
+
+/* ---------- barra de páginas: abas com ícone e nome, aba ativa em superfície clara ---------- */
+body[data-theme="nookdeck"] #dots.pagebar:not(.pb-vertical) { background: transparent; border-color: transparent; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; gap: 6px; }
+body[data-theme="nookdeck"] #dots.pagebar .dot { width: auto; height: 40px; padding: 0 16px; gap: 8px; border-radius: 12px; color: var(--nd-muted); font-size: 14px; font-weight: 600; }
+body[data-theme="nookdeck"] #dots.pagebar .dot i { display: none; }
+body[data-theme="nookdeck"] #dots.pagebar .dot.on,
+body[data-theme="nookdeck"] #dots.pagebar .dot[aria-current] { color: var(--nd-text); background: rgba(255, 255, 255, 0.07); box-shadow: none; }
+body[data-theme="nookdeck"] #dots.pagebar .dot.on .dot-ic,
+body[data-theme="nookdeck"] #dots.pagebar .dot[aria-current] .dot-ic { color: var(--nd-accent); }
+/* pontos simples (sem barra): pílula branca na página ativa */
+body[data-theme="nookdeck"] #dots:not(.pagebar) i { background: #4a4a52; }
+body[data-theme="nookdeck"] #dots:not(.pagebar) i.on { width: 20px; background: var(--nd-text); }
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-theme="nookdeck"] :is(.key, .ndq-bar i) { transition: none; }
+}
+body[data-theme="nookdeck"] #dots.pagebar .dot-nm { font-size: 14px; }
+body[data-theme="nookdeck"] #dots.pagebar .dot { max-width: 220px; }
+
+/* ícone do próprio programa ou imagem enviada: mostra a imagem inteira, sem o quadrado colorido por trás */
+body[data-theme="nookdeck"] .key:not(.k-cover) .k-icon.k-icon-img { background: transparent; }
+body[data-theme="nookdeck"] .key:not(.k-cover) .k-icon.k-icon-img img { width: 100%; height: 100%; object-fit: contain; border-radius: 22%; }

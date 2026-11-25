@@ -1775,12 +1775,28 @@ W.quotaring = {
     const st = Q_STYLE[String(prov).split('@')[0]] || { color: '#94a3b8', logo: '●' };
     box.style.setProperty('--q', st.color);
     const dial = dialEl(), label = h('div', 'g-label'), sub = h('div', 'g-sub');
-    box.append(dial, label, sub);
+    // tema Nookdeck: o mesmo dado como cartão com barra horizontal (o CSS mostra um ou outro)
+    const nqName = h('span', 'ndq-name'), nqPlan = h('span', 'ndq-plan'), nqPct = h('span', 'ndq-pct');
+    const nqFill = h('i'), nqHair = h('span', 'ndq-hair'), nqSub = h('div', 'ndq-s');
+    const ndq = h('div', 'ndq', h('div', 'ndq-head', h('span', 'ndq-mark', st.logo), nqName, nqPlan, nqPct), h('div', 'ndq-bar', nqFill, nqHair), nqSub);
+    box.append(dial, label, sub, ndq);
     let last = 0;
     const render = () => {
       const p = quotaProviders().find((x) => x.id === prov);
       const l = p?.limits?.[idx];
-      if (!l) { dial.set(0, '—'); label.textContent = `${st.logo} ${p?.name || prov}`; sub.textContent = D.quotas ? tp('No data') : tp('Waiting…'); return; }
+      nqName.textContent = p?.name || prov;
+      nqPlan.textContent = p?.plan || '';
+      nqPlan.hidden = !p?.plan;
+      if (!l) { dial.set(0, '—'); label.textContent = `${st.logo} ${p?.name || prov}`; sub.textContent = D.quotas ? tp('No data') : tp('Waiting…');
+        nqPct.textContent = '—'; nqFill.style.width = '0'; nqHair.hidden = true; nqSub.textContent = sub.textContent; return; }
+      const used = Math.round(l.percent);
+      nqPct.textContent = used + '%';
+      nqFill.style.width = Math.max(0, Math.min(100, l.percent)) + '%';
+      nqFill.style.background = l.percent >= 95 ? '#ef4444' : l.percent >= 80 ? '#f59e0b' : 'var(--q)';
+      const el = paceInfo(l)?.elapsed;
+      nqHair.hidden = el == null;
+      if (el != null) nqHair.style.left = Math.max(0, Math.min(100, el * 100)) + '%';
+      nqSub.textContent = [`${used}% usado`, `${100 - used}% livre`, l.resetsAt ? 'zera em ' + fmtDur(l.resetsAt - Date.now()) : null].filter(Boolean).join(' · ');
       const pace = paceInfo(l);
       dial.style.setProperty('--qc', l.percent >= 95 ? '#ef4444' : l.percent >= 80 ? '#f59e0b' : 'var(--q)');
       dial.set(l.percent, Math.round(l.percent), '%', pace?.elapsed);

@@ -268,7 +268,7 @@ public sealed class DisplayConfig
     /// page holds more widgets. Off by default: turning it on changes how an arranged tablet looks.
     /// </summary>
     public bool TabletRows { get; set; }
-    /// <summary>default, amoled, midnight, warm or graphite.</summary>
+    /// <summary>default, amoled, midnight, warm, graphite or nookdeck.</summary>
     public string Theme { get; set; } = "default";
     /// <summary>Accent colour (background glow, page dots), e.g. "#2dd4bf".</summary>
     public string Accent { get; set; } = "#2dd4bf";

@@ -510,6 +510,7 @@ export function sizeCanvas(c) {
 /** Draws series as area charts. series: [{ data, color, max }] */
 export function chart(canvas, series, opts = {}) {
   if (!canvas.clientWidth) return;
+  const nd = document.documentElement.dataset.theme === 'nookdeck';
   const [g, w, hh, dpr] = sizeCanvas(canvas);
   g.clearRect(0, 0, w, hh);
   if (opts.grid) {
@@ -535,12 +536,13 @@ export function chart(canvas, series, opts = {}) {
     g.lineTo(x0, hh);
     g.closePath();
     const grad = g.createLinearGradient(0, 0, 0, hh);
-    grad.addColorStop(0, s.color + '55');
-    grad.addColorStop(1, s.color + '00');
+    // tema Nookdeck: área cheia e uniforme, como no design; os outros temas mantêm o degradê
+    grad.addColorStop(0, s.color + (nd ? '4d' : '55'));
+    grad.addColorStop(1, s.color + (nd ? '33' : '00'));
     g.fillStyle = grad;
     g.fill();
   }
-  g.lineWidth = 1.6 * dpr;
+  g.lineWidth = (nd ? 2.4 : 1.6) * dpr;
   g.lineJoin = 'round';
   for (const s of visible) {
     trace(s);
@@ -789,6 +791,34 @@ export function renderStatus(el, o = {}) {
   el.replaceChildren(...kids);
   // Too long for the widget: drop the quota summaries, the most dispensable part.
   while (el.scrollWidth > el.clientWidth + 1 && el.querySelector('.qm')) [...el.querySelectorAll('.qm')].pop().remove();
+}
+
+/** Tema Nookdeck: barra de status no topo (computador, CPU, RAM, GPU, download e hora). Só existe nesse tema. */
+let ndHeadKey = '';
+export function renderNdHead() {
+  const on = document.body.dataset.theme === 'nookdeck';
+  let el = document.getElementById('ndhead');
+  document.body.classList.toggle('nd-has-head', on);
+  if (!on) { if (el) el.remove(); ndHeadKey = ''; return; }
+  if (!el) { el = h('div'); el.id = 'ndhead'; document.body.prepend(el); ndHeadKey = ''; }
+  const s = D.state, now = new Date();
+  const host = online ? (s?.host || 'PC') : online === false ? t('panel.pcNotConnected') : t('panel.connecting');
+  const m = [];
+  if (online && s) {
+    const pct = (k) => { const v = METRICS[k].pct ? METRICS[k].pct(s) : METRICS[k].val(s); return v == null ? null : Math.round(v) + '%'; };
+    for (const [lbl, v] of [['CPU', pct('cpu')], ['RAM', pct('ram')], ['GPU', pct('gpu')]]) if (v) m.push(`${lbl} ${v}`);
+    const [dv, du] = metricText(METRICS.down, s);
+    if (dv !== '—') m.push(`↓ ${dv} ${du}`);
+  }
+  const time = (hour12() ? String(now.getHours() % 12 || 12) : pad(now.getHours())) + ':' + pad(now.getMinutes());
+  const key = [online, host, ...m, time].join('|');
+  if (key === ndHeadKey) return;
+  ndHeadKey = key;
+  el.replaceChildren(
+    h('span', 'nh-conn', h('i', 'nh-dot ' + (online ? 'on' : online === false ? 'off' : 'wait')), h('b', 'nh-host', host)),
+    h('span', 'nh-m', ...m.map((x) => h('span', null, x))),
+    h('span', 'nh-grow'),
+    h('span', 'nh-t', time));
 }
 
 // ---------------------------------------------------------------- shortcuts
@@ -1581,6 +1611,7 @@ export function runUpdate(m, kind, background = false) {
 
 /** Delivers fresh data to the widgets on the visible pages; the others catch up when they come into view. */
 export function emit(kind) {
+  if (kind === 'tick' || kind === 'state') renderNdHead();
   const act = activeSet();
   for (const m of mounted) {
     if (!m.def.needs.includes(kind)) continue;
@@ -2543,7 +2574,9 @@ export function applyDisplay() {
   LOCALE = I18n ? I18n.getLocale() : 'en-GB';
   I18n?.applyDom();
   // theme and accent apply in the preview and the browser too
-  document.body.dataset.theme = ['amoled', 'midnight', 'warm', 'graphite'].includes(d.theme) ? d.theme : 'default';
+  document.body.dataset.theme = ['amoled', 'midnight', 'warm', 'graphite', 'nookdeck'].includes(d.theme) ? d.theme : 'default';
+  document.documentElement.dataset.theme = document.body.dataset.theme; // canvas charts read colours from <html> (cssVar)
+  renderNdHead();
   const accent = hexToRgb(d.accent);
   const before = DEFAULT_AMBIENT;
   DEFAULT_AMBIENT = accent || '45, 212, 191';
