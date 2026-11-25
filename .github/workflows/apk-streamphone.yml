@@ -1,0 +1,56 @@
+name: APK StreamPhone
+
+# Gera o APK do painel assinado com a chave fixa do fork, para que cada versão nova
+# instale por cima da anterior no tablet (sem desinstalar e sem perder o pareamento).
+# Precisa dos secrets do repositório (Settings > Secrets and variables > Actions):
+#   PHONEBOX_KEYSTORE_BASE64, PHONEBOX_STORE_PASSWORD, PHONEBOX_KEY_ALIAS, PHONEBOX_KEY_PASSWORD
+# O APK sai como artefato "streamphone-apk" na página da execução (aba Actions).
+
+on:
+  push:
+    branches: [main, tema-nookdeck]
+    paths: ['android/**', '.github/workflows/apk-streamphone.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    name: APK assinado
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+      - name: Restaurar a chave de assinatura
+        env:
+          KEYSTORE: ${{ secrets.PHONEBOX_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE" ]; then echo "::error::Faltam os secrets de assinatura (veja o topo de apk-streamphone.yml)"; exit 1; fi
+          echo "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.keystore"
+      - name: Compilar o APK de release
+        working-directory: android
+        env:
+          PHONEBOX_STORE_FILE: ${{ runner.temp }}/release.keystore
+          PHONEBOX_STORE_PASSWORD: ${{ secrets.PHONEBOX_STORE_PASSWORD }}
+          PHONEBOX_KEY_ALIAS: ${{ secrets.PHONEBOX_KEY_ALIAS }}
+          PHONEBOX_KEY_PASSWORD: ${{ secrets.PHONEBOX_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --console=plain
+      - name: Conferir a assinatura
+        run: |
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$APKSIGNER" verify --print-certs "$APK" | tee certs.txt
+          if grep -qi "CN=Android Debug" certs.txt; then echo "::error::O APK saiu com a chave de debug"; exit 1; fi
+          mkdir -p out && cp "$APK" "out/streamphone-${GITHUB_SHA::7}.apk"
+          rm -f "$RUNNER_TEMP/release.keystore"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: streamphone-apk
+          path: out/*.apk
