@@ -14,8 +14,10 @@ public sealed record ObsSnapshot(bool Connected, string? Error, bool Streaming, 
 /// OBS Studio through obs-websocket 5 (built into OBS 28+; Tools › WebSocket Server Settings). Keeps one connection
 /// while enabled, reads the stream / recording state and scenes every two seconds, and runs the OBS widget's buttons.
 /// </summary>
-public sealed partial class ObsMonitor(ConfigStore config, ILogger<ObsMonitor> log) : BackgroundService
+public sealed partial class ObsMonitor(ConfigStore config, ILogger<ObsMonitor> log, PushStore? push = null) : BackgroundService
 {
+    // previous poll's frame and byte counters: the pushed stats cover the last interval, not the whole stream
+    private (long Out, long OutSkip, long Ren, long RenSkip, long Enc, long EncSkip, long Bytes, long At) _last;
     private volatile ObsSnapshot _snap = new(false, null, false, 0, false, false, 0, null, [], null, null);
     private volatile ClientWebSocket? _ws;
     // Retiring a session and publishing a deck built on it are ordered by this lock (never held across an await).
@@ -89,6 +91,7 @@ public sealed partial class ObsMonitor(ConfigStore config, ILogger<ObsMonitor> l
                     // OBS lists scenes bottom-up
                     scenes?["scenes"]?.AsArray().Select(s => s?["sceneName"]?.GetValue<string>() ?? "").Where(s => s != "").Reverse().ToList() ?? [],
                     muted, mic);
+                if (push is not null) PushStats(await Request("GetStats", null, ct), stream);
                 await Task.Delay(2000, ct);
             }
         }
@@ -106,6 +109,33 @@ public sealed partial class ObsMonitor(ConfigStore config, ILogger<ObsMonitor> l
             _pending.Clear();
         }
     }
+
+    /// <summary>
+    /// OBS health as pushed values (obs_cpu, obs_fps, obs_dropped, obs_lag, obs_kbps) for push widgets and push rules.
+    /// They expire after 10 s, so they disappear when OBS closes.
+    /// </summary>
+    private void PushStats(JsonNode? stats, JsonNode? stream)
+    {
+        long L(JsonNode? n, string k) => n?[k]?.GetValue<long>() ?? 0;
+        var now = Environment.TickCount64;
+        var cur = (L(stream, "outputTotalFrames"), L(stream, "outputSkippedFrames"), L(stats, "renderTotalFrames"), L(stats, "renderSkippedFrames"),
+            L(stats, "outputTotalFrames"), L(stats, "outputSkippedFrames"), L(stream, "outputBytes"), now);
+        var prev = _last;
+        _last = cur;
+        // warn / error colour the push widget (main.js levelOf)
+        void Set(string key, double value, string unit, double warn = double.MaxValue, double error = double.MaxValue) =>
+            push!.Set(key, JsonSerializer.SerializeToElement(new { value = Math.Round(value, 1), unit,
+                level = value >= error ? "error" : value >= warn ? "warn" : "ok" }), 10);
+        Set("obs_cpu", stats?["cpuUsage"]?.GetValue<double>() ?? 0, "%", 70, 90);
+        Set("obs_fps", stats?["activeFps"]?.GetValue<double>() ?? 0, "fps");
+        Set("obs_dropped", Pct(cur.Item2 - prev.OutSkip, cur.Item1 - prev.Out), "%", 1, 5);
+        Set("obs_lag", Pct(cur.Item4 - prev.RenSkip + cur.Item6 - prev.EncSkip, cur.Item3 - prev.Ren + cur.Item5 - prev.Enc), "%", 1, 5);
+        var ms = now - prev.At;
+        Set("obs_kbps", prev.At > 0 && ms > 0 && cur.Item7 >= prev.Bytes ? (cur.Item7 - prev.Bytes) * 8.0 / ms : 0, "kb/s");
+    }
+
+    /// <summary>Share of skipped frames in an interval; 0 when nothing was produced or a counter restarted.</summary>
+    internal static double Pct(long skipped, long total) => total > 0 && skipped >= 0 ? Math.Min(100, skipped * 100.0 / total) : 0;
 
     private async Task ReadLoop(ClientWebSocket ws, CancellationToken ct)
     {

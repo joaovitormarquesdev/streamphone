@@ -15,14 +15,33 @@ Com o agente oficial (sem este fork), a opção `Nookdeck` não aparece na lista
 
 ## Layout pronto
 
-`layouts/nookdeck-tablet.json` tem quatro páginas: Visão geral, Sistema, Live e Atalhos.
+`layouts/nookdeck-tablet.json` tem cinco páginas: Visão geral, Sistema, Live, Atalhos e Processos.
 Em **Pages**, use **Import** e escolha o arquivo. Ajuste a tela do editor para tablet largo (12×8) antes de importar.
+
+A Visão geral mostra os widgets "Pushed value" `jogo_cpu`, `jogo_gpu`, `jogo_ram` e `jogo_temp`, alimentados pelo script
+do PC de jogo via `POST /api/push/<chave>`. A mídia ocupa 4 colunas: é a largura mínima dela, com 3 ela invadia a vizinha.
 
 A página Live usa:
 
 - cenas, gravação/transmissão e mixer do OBS (com "Allow OBS controls from the phone" ligado);
-- quatro widgets "Pushed value" com as chaves `jogo_cpu`, `jogo_gpu`, `jogo_ram` e `jogo_temp`, alimentados pelo script do PC de jogo via `POST /api/push/<chave>`;
-- uma grade de atalhos com 3 colunas.
+- as estatísticas que o agente do fork lê do OBS a cada 2 s e publica como valores (expiram em 10 s):
+  `obs_dropped` (quadros perdidos na rede, %), `obs_lag` (quadros atrasados no render/encoder, %), `obs_cpu`, `obs_fps`
+  e `obs_kbps`. Cada valor traz `level` (ok/warn/error), que colore o cartão, e serve de gatilho para regras do tipo "valor enviado";
+- uma grade de atalhos (5 colunas) com os ids dos botões do OBS.
+
+## Atalhos do OBS
+
+Os botões apertam hotkeys globais configuradas no OBS (perfil › Configurações › Atalhos), em teclas que jogos não usam:
+
+| Tecla | Ação |
+|---|---|
+| F13 … F21 | as cenas, na ordem da lista do OBS |
+| Ctrl+F13 / F14 / F15 | live, gravação, pausar gravação (mesma tecla liga e desliga) |
+| Ctrl+F16 / F17 | mutar o mic / o som do PC |
+| Ctrl+F18 / F19 / F20 / F21 | print, marcador de capítulo, replay buffer, câmera virtual |
+
+O agente segura cada tecla 50 ms: o OBS consulta o teclado a cada ~25 ms e perdia toques instantâneos.
+Os atalhos ficam no `config.json` do agente, não no layout: a grade só mostra os ids que existirem lá.
 
 ## Arquivos
 

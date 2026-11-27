@@ -322,3 +322,14 @@ public sealed class ObsTests : IDisposable
         try { File.Delete(_configPath); } catch { }
     }
 }
+
+public sealed class ObsStatsTests
+{
+    [Theory]
+    [InlineData(3, 150, 2.0)]   // 3 of 150 frames dropped in the interval
+    [InlineData(0, 0, 0.0)]     // nothing produced (not streaming)
+    [InlineData(-40, -900, 0.0)] // counters restarted after a reconnect
+    [InlineData(500, 100, 100.0)]
+    public void Pct_is_the_skipped_share_of_the_interval(long skipped, long total, double expected) =>
+        Assert.Equal(expected, ObsMonitor.Pct(skipped, total), 3);
+}
