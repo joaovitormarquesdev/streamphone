@@ -170,6 +170,37 @@
       ]
     },
     {
+      "title": "IAs",
+      "icon": "✳️",
+      "widgets": [
+        {
+          "type": "sessions",
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 3
+        },
+        {
+          "type": "quotas",
+          "x": 0,
+          "y": 3,
+          "w": 12,
+          "h": 5,
+          "options": {
+            "providers": [
+              "claude",
+              "codex",
+              "antigravity",
+              "grok"
+            ],
+            "rotate": true,
+            "pageSize": 2,
+            "rotateInterval": 8
+          }
+        }
+      ]
+    },
+    {
       "title": "Sistema",
       "icon": "🖥",
       "widgets": [

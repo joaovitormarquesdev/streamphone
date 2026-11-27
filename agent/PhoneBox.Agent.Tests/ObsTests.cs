@@ -82,9 +82,13 @@ public sealed class ObsTests : IDisposable
                     "GetSceneList" => new { currentProgramSceneName = _scene, scenes = new[] { new { sceneName = "BRB" }, new { sceneName = "Desk" }, new { sceneName = "Camera" } } },
                     "GetSpecialInputs" => new { mic1 = "Mic/Aux" },
                     "GetInputMute" => new { inputMuted = true },
-                    "GetInputList" => new { inputs = new[] { new { inputName = "Mic/Aux" } } },
+                    // only Mic/Aux (global) and Webcam (in the scene, with audio) belong in the mixer
+                    "GetInputList" => new { inputs = new[] { new { inputName = "Mic/Aux", inputKind = "wasapi_input_capture" },
+                        new { inputName = "Webcam", inputKind = "dshow_input" }, new { inputName = "Overlay", inputKind = "browser_source" },
+                        new { inputName = "Elsewhere", inputKind = "dshow_input" } } },
+                    "GetInputSettings" => new { inputSettings = new { reroute_audio = false } },
                     "GetInputVolume" => new { inputVolumeMul = 0.65 },
-                    "GetSceneItemList" => new { sceneItems = new[] { new { sceneItemId = 7, sourceName = "Webcam", sceneItemEnabled = true } } },
+                    "GetSceneItemList" => new { sceneItems = new[] { new { sceneItemId = 7, sourceName = "Webcam", sceneItemEnabled = true }, new { sceneItemId = 8, sourceName = "Overlay", sceneItemEnabled = true } } },
                     "GetSceneTransitionList" => new { transitions = new[] { new { transitionName = "Fade" } } },
                     "GetCurrentSceneTransition" => new { transitionName = "Fade", transitionDuration = 300 },
                     "GetReplayBufferStatus" => new { outputActive = true },
@@ -263,6 +267,7 @@ public sealed class ObsTests : IDisposable
             var state=await UntilDeck(obs);
             Assert.Equal("Mic/Aux",state["inputs"]![0]!["id"]!.GetValue<string>());
             Assert.Equal(65,state["inputs"]![0]!["volume"]!.GetValue<double>());
+            Assert.Equal(["Mic/Aux", "Webcam"], state["inputs"]!.AsArray().Select(i => i!["id"]!.GetValue<string>()));
         }
         finally { _inputsReady.TrySetResult();await obs.StopAsync(default); }
     }

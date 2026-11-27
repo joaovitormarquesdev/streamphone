@@ -210,6 +210,20 @@ body[data-theme="nookdeck"] .deck-button:active,
 body[data-theme="nookdeck"] .deck-hold.held { background: var(--nd-accent); color: var(--on-light); }
 body[data-theme="nookdeck"] .chip-btn { background: var(--pill-flat); border-radius: 999px; }
 
+/* mixer do OBS: um canal por linha (nome | volume | valor | mudo), cabem 5-6 canais num cartão 4×4 */
+body[data-theme="nookdeck"] .w-obs-mixer .deck-list { gap: 6px; }
+body[data-theme="nookdeck"] .w-obs-mixer .deck-channel {
+  display: grid; grid-template-columns: minmax(64px, 30%) minmax(0, 1fr) 34px auto; align-items: center; gap: 8px; padding: 6px 8px;
+}
+body[data-theme="nookdeck"] .w-obs-mixer .deck-channel-foot { display: contents; }
+body[data-theme="nookdeck"] .w-obs-mixer .deck-channel-name { font-size: 12px; }
+body[data-theme="nookdeck"] .w-obs-mixer .deck-slider { height: 22px; }
+body[data-theme="nookdeck"] .w-obs-mixer .deck-value { font-size: 13px; text-align: right; color: var(--nd-muted); }
+body[data-theme="nookdeck"] .w-obs-mixer .deck-button { min-height: 30px; padding: 4px 10px; font-size: 12px; }
+body[data-theme="nookdeck"] .w-obs-mixer .deck-muted { border-color: var(--nd-bad); }
+body[data-theme="nookdeck"] .w-obs-mixer .deck-muted .deck-channel-name { color: var(--nd-bad); }
+body[data-theme="nookdeck"] .w-obs-mixer .deck-button[aria-pressed="true"] { border-color: var(--nd-bad); background: rgba(239, 68, 68, .16); }
+
 /* ---------- barra de páginas: abas com ícone e nome, aba ativa em superfície clara ---------- */
 body[data-theme="nookdeck"] #dots.pagebar:not(.pb-vertical) { background: transparent; border-color: transparent; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; gap: 6px; }
 body[data-theme="nookdeck"] #dots.pagebar .dot { width: auto; height: 40px; padding: 0 16px; gap: 8px; border-radius: 12px; color: var(--nd-muted); font-size: 14px; font-weight: 600; }

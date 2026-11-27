@@ -56,6 +56,33 @@ public sealed partial class ObsMonitor : IVirtualCamera
         return CachedDeck(fresh: false) ?? new() { ["connected"] = false, ["loading"] = true, ["error"] = "Discovering OBS controls; waiting for OBS" };
     }
 
+    /// <summary>
+    /// Names of the inputs OBS's audio mixer can show for this scene: the global audio devices (Settings › Audio) and the
+    /// inputs of the scene's visible items, walking into nested scenes and groups (each scene once).
+    /// </summary>
+    private static async Task<HashSet<string>> MixerCandidates(string? scene, Func<string, JsonObject?, Task<JsonNode?>> optional)
+    {
+        var names = new HashSet<string>();
+        if (await optional("GetSpecialInputs", null) is JsonObject special)
+            foreach (var (_, v) in special) if (v?.GetValue<string>() is { Length: > 0 } n) names.Add(n);
+        var seen = new HashSet<string>();
+        async Task Walk(string name, bool group)
+        {
+            if (seen.Count >= 32 || !seen.Add(name)) return;
+            var list = await optional(group ? "GetGroupSceneItemList" : "GetSceneItemList", new() { ["sceneName"] = name });
+            foreach (var item in list?["sceneItems"] as JsonArray ?? [])
+            {
+                if (item?["sceneItemEnabled"]?.GetValue<bool>() == false) continue;
+                var source = item?["sourceName"]?.GetValue<string>(); if (string.IsNullOrEmpty(source)) continue;
+                if (item?["isGroup"]?.GetValue<bool>() == true) await Walk(source, true);
+                else if (item?["sourceType"]?.GetValue<string>() == "OBS_SOURCE_TYPE_SCENE") await Walk(source, false);
+                else names.Add(source);
+            }
+        }
+        if (scene is not null) await Walk(scene, false);
+        return names;
+    }
+
     private async Task<JsonObject> BuildDeckSnapshot(CancellationToken ct)
     {
         var session = _ws;
@@ -71,19 +98,27 @@ public sealed partial class ObsMonitor : IVirtualCamera
             async Task<JsonNode?> Optional(string request, JsonObject? args = null)
             { try { return await Request(request, args, ct); } catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; } catch { return null; } }
             var rawInputs = (await Optional("GetInputList"))?["inputs"] as JsonArray;
+            var scene = _snap.Scene;
+            // Like OBS's own audio mixer: the global audio devices plus the inputs shown in the current scene (nested scenes
+            // and groups included), not every input of the collection.
+            var inMixer = await MixerCandidates(scene, Optional);
             var inputs = new JsonArray();
             foreach (var input in rawInputs?.Take(64) ?? [])
             {
                 if (!_snap.Connected || !ReferenceEquals(_ws, session)) return DisconnectedDeck();
                 var name = input?["inputName"]?.GetValue<string>(); if (string.IsNullOrEmpty(name)) continue;
+                if (!inMixer.Contains(name)) continue;
                 var args = new JsonObject { ["inputName"] = name };
+                // a browser source plays its own audio unless "Control audio via OBS" is on; then OBS's mixer leaves it out
+                if (input?["inputKind"]?.GetValue<string>() == "browser_source"
+                    && (await Optional("GetInputSettings", args))?["inputSettings"]?["reroute_audio"]?.GetValue<bool>() != true) continue;
                 var volume = await Optional("GetInputVolume", args);
+                if (volume is null) continue; // no audio (display capture, image, …): OBS refuses the request
                 var mute = await Optional("GetInputMute", new() { ["inputName"] = name });
                 inputs.Add(new JsonObject { ["id"] = name, ["name"] = name,
                     ["volume"] = volume?["inputVolumeMul"] is { } mul ? Math.Round(mul.GetValue<double>() * 100) : null,
                     ["muted"] = mute?["inputMuted"]?.DeepClone() });
             }
-            var scene = _snap.Scene;
             var rawItems = scene is null ? null : (await Optional("GetSceneItemList", new() { ["sceneName"] = scene }))?["sceneItems"] as JsonArray;
             var items = new JsonArray();
             foreach (var item in rawItems ?? []) items.Add(new JsonObject { ["id"] = item?["sceneItemId"]?.DeepClone(),

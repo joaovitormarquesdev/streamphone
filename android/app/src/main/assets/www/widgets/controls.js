@@ -692,7 +692,8 @@ integrationWidget('obs-mixer', 'OBS mixer', 'obs', (root, data, send) => {
     s.set(input.volume || 0); s.input.disabled = input.volume == null;
     const mute = button(input.muted ? tp('Unmute') : tp('Mute'), ()=>send('mute',{id:input.id,enabled:!input.muted}), 'Mute ' + input.name);
     mute.disabled = input.muted == null;
-    root.append(h('div','deck-channel',h('div','deck-channel-name',input.name),s.input,h('div','deck-channel-foot',s.number,mute)));
+    mute.setAttribute('aria-pressed', String(!!input.muted));
+    root.append(h('div','deck-channel'+(input.muted?' deck-muted':''),h('div','deck-channel-name',input.name),s.input,h('div','deck-channel-foot',s.number,mute)));
   }
 });
 integrationWidget('obs-scenes', 'OBS scenes', 'obs', (root, data, send) => {
