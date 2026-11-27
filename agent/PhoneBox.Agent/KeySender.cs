@@ -150,14 +150,19 @@ public static class KeySender
     internal static bool NudgeInput() =>
         SendInput(1, [new INPUT { type = 0 /* MOUSE */, u = new InputUnion { mi = new MOUSEINPUT { dwFlags = 1 /* MOVE, by 0 */ } } }], Marshal.SizeOf<INPUT>()) == 1;
 
+    /// <summary>How long a combo's keys stay down before they are released.</summary>
+    internal const int HoldMs = 50;
+
     /// <summary>Presses one parsed combo; false when Windows took none or only part of the input.</summary>
     public static bool SendCombo(List<string> combo)
     {
         var keys = combo.Select(k => (Vk: WinVk(k), Extended: WinExtended(k))).ToList();
-        var inputs = new List<INPUT>();
-        foreach (var (vk, ext) in keys) inputs.Add(Key(vk, false, ext));
-        foreach (var (vk, ext) in Enumerable.Reverse(keys)) inputs.Add(Key(vk, true, ext));
-        return SendInput((uint)inputs.Count, inputs.ToArray(), Marshal.SizeOf<INPUT>()) == inputs.Count;
+        var down = keys.Select(k => Key(k.Vk, false, k.Extended)).ToArray();
+        var up = Enumerable.Reverse(keys).Select(k => Key(k.Vk, true, k.Extended)).ToArray();
+        var ok = SendInput((uint)down.Length, down, Marshal.SizeOf<INPUT>()) == down.Length;
+        // held briefly, like a real key: OBS reads its hotkeys by polling the key state every ~25 ms and misses a 0 ms tap
+        Thread.Sleep(HoldMs);
+        return SendInput((uint)up.Length, up, Marshal.SizeOf<INPUT>()) == up.Length && ok;
     }
 
     public static void TypeText(string text) => TryTypeText(text, CancellationToken.None);

@@ -337,8 +337,9 @@ public sealed class LanConfig
 
 public sealed class UpdateConfig
 {
-    /// <summary>Install new GitHub releases automatically (phone app over USB, agent in place).</summary>
-    public bool Auto { get; set; } = true;
+    /// <summary>Install new GitHub releases automatically (phone app over USB, agent in place).
+    /// Off in this fork: an upstream release would replace the fork's agent and phone app.</summary>
+    public bool Auto { get; set; }
     public string Repo { get; set; } = "ersinkoc/phonebox";
 }
 
